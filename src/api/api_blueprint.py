@@ -29,9 +29,6 @@ def register_api_blueprints(app: Flask):
         }
     })
     
-    # APIインスタンス作成
-    api = Api(app, prefix='/api')
-    
     # 各APIブループリントを登録
     app.register_blueprint(ai_bp, url_prefix='/api/ai')
     # app.register_blueprint(sensors_bp, url_prefix='/api/sensors')
@@ -41,7 +38,10 @@ def register_api_blueprints(app: Flask):
     # app.register_blueprint(settings_bp, url_prefix='/api/settings')
     
     # 一時的なテスト用APIエンドポイント
-    from flask_restful import Resource
+    from flask_restful import Resource, Api
+    
+    # APIインスタンス作成
+    api = Api(app, prefix='/api')
     
     class HealthCheckResource(Resource):
         """ヘルスチェックAPI"""

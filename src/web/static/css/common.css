@@ -1,0 +1,215 @@
+/* 豆苗プランター - 共通CSS */
+
+/* カスタム変数 */
+:root {
+    --primary-color: #28a745;
+    --secondary-color: #20c997;
+    --success-color: #28a745;
+    --info-color: #17a2b8;
+    --warning-color: #ffc107;
+    --danger-color: #dc3545;
+    --light-color: #f8f9fa;
+    --dark-color: #343a40;
+}
+
+/* ヒーローセクション */
+.hero-section {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    padding: 100px 0;
+}
+
+/* カード関連 */
+.feature-card {
+    transition: transform 0.3s;
+    border: none;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+}
+
+.feature-card:hover {
+    transform: translateY(-5px);
+}
+
+.status-card {
+    transition: transform 0.2s;
+}
+
+.status-card:hover {
+    transform: translateY(-2px);
+}
+
+.camera-card {
+    transition: transform 0.2s;
+}
+
+.camera-card:hover {
+    transform: translateY(-2px);
+}
+
+/* ステータスインジケーター */
+.status-indicator {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+    margin-right: 8px;
+}
+
+.status-online { 
+    background-color: var(--success-color); 
+}
+
+.status-offline { 
+    background-color: var(--danger-color); 
+}
+
+.status-active { 
+    background-color: var(--success-color); 
+}
+
+.status-inactive { 
+    background-color: var(--danger-color); 
+}
+
+.status-disabled { 
+    background-color: #6c757d; 
+}
+
+/* チャット関連 */
+.ai-chat {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.chat-container {
+    height: 500px;
+    overflow-y: auto;
+    border: 1px solid #dee2e6;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    background-color: #f8f9fa;
+}
+
+.message {
+    margin-bottom: 1rem;
+}
+
+.user-message {
+    text-align: right;
+}
+
+.ai-message {
+    text-align: left;
+}
+
+.message-bubble {
+    display: inline-block;
+    max-width: 80%;
+    padding: 0.75rem 1rem;
+    border-radius: 1rem;
+    word-wrap: break-word;
+}
+
+.user-bubble {
+    background-color: #007bff;
+    color: white;
+}
+
+.ai-bubble {
+    background-color: white;
+    border: 1px solid #dee2e6;
+}
+
+/* タグ関連 */
+.tag-badge {
+    cursor: pointer;
+    transition: all 0.2s;
+}
+
+.tag-badge:hover {
+    transform: scale(1.05);
+}
+
+.tag-badge.active {
+    background-color: var(--success-color) !important;
+}
+
+/* タンク関連 */
+.tank-visual {
+    width: 200px;
+    height: 300px;
+    border: 3px solid #333;
+    border-radius: 10px;
+    position: relative;
+    margin: 0 auto;
+    background: linear-gradient(to top, #007bff 0%, #007bff var(--water-level, 0%), #f8f9fa var(--water-level, 0%), #f8f9fa 100%);
+}
+
+.tank-label {
+    position: absolute;
+    bottom: -30px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-weight: bold;
+}
+
+.progress-circle {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    background: conic-gradient(var(--success-color) 0deg, var(--success-color) var(--progress, 0deg), #e9ecef var(--progress, 0deg), #e9ecef 360deg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin: 0 auto;
+}
+
+.progress-text {
+    background: white;
+    width: 80px;
+    height: 80px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 1.2rem;
+}
+
+/* ログ関連 */
+.log-container {
+    height: 400px;
+    overflow-y: auto;
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 5px;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.log-entry {
+    margin-bottom: 0.5rem;
+}
+
+/* レスポンシブ対応 */
+@media (max-width: 768px) {
+    .hero-section {
+        padding: 60px 0;
+    }
+    
+    .tank-visual {
+        width: 150px;
+        height: 225px;
+    }
+    
+    .progress-circle {
+        width: 100px;
+        height: 100px;
+    }
+    
+    .progress-text {
+        width: 70px;
+        height: 70px;
+        font-size: 1rem;
+    }
+}

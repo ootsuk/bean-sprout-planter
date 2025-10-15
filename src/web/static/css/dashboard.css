@@ -1,0 +1,90 @@
+/* 豆苗プランター - ダッシュボード専用CSS */
+
+/* ダッシュボード固有のスタイル */
+.dashboard-header {
+    background: linear-gradient(135deg, var(--primary-color) 0%, var(--secondary-color) 100%);
+    color: white;
+    padding: 2rem 0;
+    margin-bottom: 2rem;
+}
+
+.sensor-card {
+    border: none;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+}
+
+.sensor-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.sensor-value {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin: 0.5rem 0;
+}
+
+.sensor-unit {
+    font-size: 0.9rem;
+    opacity: 0.8;
+}
+
+.harvest-status-card {
+    min-height: 300px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.harvest-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+}
+
+.latest-image-container {
+    text-align: center;
+    padding: 1rem;
+}
+
+.latest-image {
+    max-width: 100%;
+    height: auto;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+/* アニメーション */
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+.pulse-animation {
+    animation: pulse 2s infinite;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+.fade-in {
+    animation: fadeIn 0.5s ease-out;
+}
+
+/* レスポンシブ調整 */
+@media (max-width: 768px) {
+    .sensor-value {
+        font-size: 2rem;
+    }
+    
+    .harvest-icon {
+        font-size: 3rem;
+    }
+    
+    .dashboard-header {
+        padding: 1.5rem 0;
+    }
+}
