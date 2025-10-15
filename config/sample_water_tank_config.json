@@ -1,0 +1,7 @@
+{
+  "current_volume": 2000,
+  "tank_capacity": 2000,
+  "low_water_threshold": 200,
+  "refill_notification_enabled": true,
+  "last_updated": "2025-10-15T00:00:00"
+}

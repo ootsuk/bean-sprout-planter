@@ -1,0 +1,14 @@
+{
+  "camera_001": {
+    "index": 0,
+    "layer": 1,
+    "enabled": true,
+    "added_at": "2025-10-15T00:00:00"
+  },
+  "camera_002": {
+    "index": 1,
+    "layer": 2,
+    "enabled": true,
+    "added_at": "2025-10-15T00:00:00"
+  }
+}

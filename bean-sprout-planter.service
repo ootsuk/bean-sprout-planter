@@ -1,0 +1,15 @@
+[Unit]
+Description=Bean Sprout Planter Service
+After=network.target
+
+[Service]
+Type=simple
+User=pi
+WorkingDirectory=/home/pi/projects/bean-sprout-planter
+Environment=PATH=/home/pi/projects/bean-sprout-planter/venv/bin
+ExecStart=/home/pi/projects/bean-sprout-planter/venv/bin/python main.py
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
