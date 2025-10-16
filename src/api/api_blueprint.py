@@ -10,11 +10,10 @@ from flask_cors import CORS
 
 # APIブループリントのインポート
 from src.api.ai_api import ai_bp
-# from src.api.sensors_api import sensors_bp
-# from src.api.watering_api import watering_bp
-# from src.api.camera_api import camera_bp
-# from src.api.notifications_api import notifications_bp
-# from src.api.settings_api import settings_bp
+from src.api.sensors_api import sensors_bp
+from src.api.watering_api import watering_bp
+from src.api.camera_api import camera_bp
+from src.api.settings_api import settings_bp
 
 
 def register_api_blueprints(app: Flask):
@@ -31,11 +30,10 @@ def register_api_blueprints(app: Flask):
     
     # 各APIブループリントを登録
     app.register_blueprint(ai_bp, url_prefix='/api/ai')
-    # app.register_blueprint(sensors_bp, url_prefix='/api/sensors')
-    # app.register_blueprint(watering_bp, url_prefix='/api/watering')
-    # app.register_blueprint(camera_bp, url_prefix='/api/camera')
-    # app.register_blueprint(notifications_bp, url_prefix='/api/notifications')
-    # app.register_blueprint(settings_bp, url_prefix='/api/settings')
+    app.register_blueprint(sensors_bp, url_prefix='/api/sensors')
+    app.register_blueprint(watering_bp, url_prefix='/api/watering')
+    app.register_blueprint(camera_bp, url_prefix='/api/camera')
+    app.register_blueprint(settings_bp, url_prefix='/api/settings')
     
     # 一時的なテスト用APIエンドポイント
     from flask_restful import Resource, Api

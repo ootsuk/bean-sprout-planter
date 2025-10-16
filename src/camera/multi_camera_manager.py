@@ -445,6 +445,38 @@ class MultiCameraManager:
         except Exception:
             return False
     
+    def get_status(self) -> Dict[str, Any]:
+        """カメラシステムの状態を取得"""
+        try:
+            total_cameras = len(self.cameras)
+            active_cameras = len([c for c in self.cameras.values() if c.get('enabled', False)])
+            disabled_cameras = total_cameras - active_cameras
+            total_schedules = len(self.schedules)
+            
+            return {
+                'total_cameras': total_cameras,
+                'active_cameras': active_cameras,
+                'disabled_cameras': disabled_cameras,
+                'total_schedules': total_schedules,
+                'schedule_running': self.schedule_running,
+                'cameras': self.cameras,
+                'schedules': self.schedules,
+                'image_resolution': f"{self.image_width}x{self.image_height}",
+                'save_directory': self.save_dir
+            }
+        except Exception as e:
+            self.logger.error(f"状態取得エラー: {e}")
+            return {
+                'total_cameras': 0,
+                'active_cameras': 0,
+                'disabled_cameras': 0,
+                'total_schedules': 0,
+                'schedule_running': False,
+                'cameras': {},
+                'schedules': {},
+                'error': str(e)
+            }
+    
     def cleanup(self):
         """リソースのクリーンアップ"""
         try:
