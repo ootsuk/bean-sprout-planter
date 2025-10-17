@@ -9,6 +9,9 @@ from flask import Blueprint, request, jsonify
 from flask_restful import Resource, Api
 from src.ai.ai_consultation import AIConsultationManager
 import logging
+import base64
+from PIL import Image
+import io
 
 # ブループリント作成
 ai_bp = Blueprint('ai', __name__)
@@ -24,18 +27,48 @@ class AIConsultationResource(Resource):
     def post(self):
         """AI相談を実行"""
         try:
-            data = request.get_json()
-            if not data:
-                return {'error': 'リクエストボディが必要です'}, 400
-            
-            question = data.get('question')
-            tag = data.get('tag', 'general')
-            
-            if not question:
-                return {'error': '質問内容が必要です'}, 400
-            
-            # AI相談を実行
-            result = ai_manager.consult(question, tag)
+            # フォームデータまたはJSONデータを処理
+            if request.content_type and 'multipart/form-data' in request.content_type:
+                # 画像付きのリクエスト
+                question = request.form.get('question', '')
+                tag = request.form.get('tag', 'general')
+                image_file = request.files.get('image')
+                
+                if not question and not image_file:
+                    return {'error': '質問または画像が必要です'}, 400
+                
+                # 画像がある場合はBase64エンコード
+                image_data = None
+                if image_file:
+                    try:
+                        image = Image.open(image_file)
+                        # 画像をリサイズ（最大1024px）
+                        image.thumbnail((1024, 1024))
+                        
+                        buffer = io.BytesIO()
+                        image.save(buffer, format='JPEG', quality=85)
+                        image_data = base64.b64encode(buffer.getvalue()).decode('utf-8')
+                    except Exception as img_error:
+                        logging.error(f"画像処理エラー: {str(img_error)}")
+                        return {'error': '画像の処理に失敗しました'}, 400
+                
+                # AI相談を実行（画像付き）
+                result = ai_manager.consult(question, tag, image_data)
+                
+            else:
+                # JSONリクエスト
+                data = request.get_json()
+                if not data:
+                    return {'error': 'リクエストボディが必要です'}, 400
+                
+                question = data.get('question')
+                tag = data.get('tag', 'general')
+                
+                if not question:
+                    return {'error': '質問内容が必要です'}, 400
+                
+                # AI相談を実行
+                result = ai_manager.consult(question, tag)
             
             return {
                 'status': 'success',

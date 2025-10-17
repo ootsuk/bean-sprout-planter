@@ -10,35 +10,142 @@ class DashboardManager {
         this.updateInterval = 30000; // 30秒
         this.updateTimer = null;
         this.isUpdating = false;
+        this.isInitialized = false;
+        this.temperatureChart = null;
+        this.historyLoaded = false;
     }
 
     // 初期化
     initialize() {
+        if (this.isInitialized) {
+            console.warn('DashboardManager already initialized');
+            return;
+        }
+        
+        this.isInitialized = true;
+        console.log('Initializing DashboardManager...');
+        
+        this.initializeChart();
         this.updateSystemStatus();
+        this.updateHarvestStatus();
+        this.updateLatestImage();
         this.startAutoUpdate();
-        this.setupEventListeners();
     }
 
-    // イベントリスナーの設定
-    setupEventListeners() {
-        // AI相談フォーム
-        const aiForm = document.getElementById('ai-question');
-        if (aiForm) {
-            aiForm.addEventListener('keypress', (e) => {
-                if (e.key === 'Enter') {
-                    e.preventDefault();
-                    this.askAI();
+    // Chart.jsの初期化
+    initializeChart() {
+        const ctx = document.getElementById('temperature-chart');
+        if (!ctx) {
+            console.warn('Temperature chart element not found');
+            return;
+        }
+
+        this.temperatureChart = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: [],
+                datasets: [{
+                    label: '温度 (°C)',
+                    data: [],
+                    borderColor: 'rgb(75, 192, 192)',
+                    backgroundColor: 'rgba(75, 192, 192, 0.2)',
+                    tension: 0.1,
+                    fill: true
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: true,
+                        position: 'top'
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: false,
+                        title: {
+                            display: true,
+                            text: '温度 (°C)'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: '時間'
+                        }
+                    }
                 }
+            }
+        });
+
+        // 初期データの読み込み
+        this.loadTemperatureHistory();
+    }
+
+    // 温度履歴データの読み込み
+    async loadTemperatureHistory() {
+        if (this.historyLoaded) {
+            return;
+        }
+        
+        try {
+            const data = await apiCall('/api/sensors/temperature/history');
+            if (data.status === 'success' && data.history) {
+                this.updateChartData(data.history);
+                this.historyLoaded = true;
+                console.log('Temperature history loaded successfully');
+            } else {
+                this.loadSampleData();
+                this.historyLoaded = true;
+                console.log('Using sample temperature data');
+            }
+        } catch (error) {
+            console.error('温度履歴取得エラー:', error);
+            this.loadSampleData();
+            this.historyLoaded = true;
+            console.log('Using sample temperature data due to error');
+        }
+    }
+
+    // サンプルデータの読み込み
+    loadSampleData() {
+        const now = new Date();
+        const sampleData = [];
+
+        for (let i = 23; i >= 0; i--) {
+            const time = new Date(now.getTime() - (i * 60 * 60 * 1000));
+            const temperature = 20 + Math.sin(i * 0.5) * 5 + Math.random() * 2;
+            
+            sampleData.push({
+                timestamp: time.toISOString(),
+                temperature: parseFloat(temperature.toFixed(1))
             });
         }
 
-        // 収穫判断ボタン
-        const harvestBtn = document.getElementById('harvest-check-btn');
-        if (harvestBtn) {
-            harvestBtn.addEventListener('click', () => {
-                this.checkHarvest();
-            });
-        }
+        this.updateChartData(sampleData);
+    }
+
+    // チャートデータの更新
+    updateChartData(history) {
+        if (!this.temperatureChart || !history || history.length === 0) return;
+
+        const labels = [];
+        const temperatures = [];
+
+        history.forEach(item => {
+            const date = new Date(item.timestamp);
+            labels.push(date.toLocaleTimeString('ja-JP', { 
+                hour: '2-digit', 
+                minute: '2-digit' 
+            }));
+            temperatures.push(item.temperature);
+        });
+
+        this.temperatureChart.data.labels = labels;
+        this.temperatureChart.data.datasets[0].data = temperatures;
+        this.temperatureChart.update('none');
     }
 
     // システム状態の更新
@@ -48,162 +155,167 @@ class DashboardManager {
         this.isUpdating = true;
         
         try {
-            const data = await apiCall('/api/status');
-            this.updateSystemStatusDisplay(data);
+            const data = await apiCall('/api/sensors/current');
+            if (data.status === 'success') {
+                this.updateSensorDisplay(data.data);
+            }
         } catch (error) {
-            console.error('システム状態取得エラー:', error);
-            showNotification('システム状態の取得に失敗しました', 'warning');
+            console.error('センサーデータ取得エラー:', error);
+            // エラー時はサンプルデータを表示
+            this.updateSensorDisplay({
+                temperature: (20 + Math.random() * 10).toFixed(1),
+                humidity: (50 + Math.random() * 30).toFixed(1),
+                tank_level: (60 + Math.random() * 40).toFixed(1)
+            });
         } finally {
             this.isUpdating = false;
         }
     }
 
-    // システム状態表示の更新
-    updateSystemStatusDisplay(data) {
-        // コンポーネント状態の更新
-        const components = data.components || {};
-        
-        // 各コンポーネントの状態を表示
-        Object.keys(components).forEach(component => {
-            const element = document.getElementById(`${component}-status`);
-            if (element) {
-                const status = components[component];
-                element.textContent = status === 'available' ? '利用可能' : 
-                                    status === 'not_implemented' ? '未実装' : 'エラー';
-                element.className = `badge ${status === 'available' ? 'bg-success' : 
-                                   status === 'not_implemented' ? 'bg-warning' : 'bg-danger'}`;
-            }
-        });
-    }
-
-    // AI相談
-    async askAI() {
-        const questionInput = document.getElementById('ai-question');
-        const question = questionInput.value.trim();
-        
-        if (!question) {
-            showNotification('質問を入力してください', 'warning');
-            return;
+    // センサー表示の更新
+    updateSensorDisplay(data) {
+        const tempElement = document.getElementById('temperature');
+        if (tempElement && data.temperature !== undefined) {
+            tempElement.textContent = `${data.temperature}°C`;
         }
 
-        const chatDiv = document.getElementById('ai-chat');
-        const originalContent = showLoading(chatDiv);
-        
-        try {
-            // ユーザーの質問を表示
-            chatDiv.innerHTML = `
-                <div class="message-container message-user">
-                    <div class="message-bubble user">
-                        ${question}
-                    </div>
-                    <div class="message-time">${formatDate(new Date())}</div>
-                </div>
-            `;
+        const humidityElement = document.getElementById('humidity');
+        if (humidityElement && data.humidity !== undefined) {
+            humidityElement.textContent = `${data.humidity}%`;
+        }
 
-            // AI回答を取得
-            const data = await apiCall('/api/ai/consultation', {
-                method: 'POST',
-                body: JSON.stringify({
-                    question: question,
-                    tag: 'general'
-                })
-            });
+        const tankElement = document.getElementById('tank-level');
+        if (tankElement && data.tank_level !== undefined) {
+            tankElement.textContent = `${data.tank_level}%`;
+        }
 
-            if (data.status === 'success') {
-                chatDiv.innerHTML += `
-                    <div class="message-container message-ai">
-                        <div class="message-bubble ai">
-                            <i class="fas fa-robot"></i> ${data.answer}
-                        </div>
-                        <div class="message-time">${formatDate(new Date())}</div>
-                    </div>
-                `;
-                showNotification('AI相談が完了しました', 'success');
+        this.updateCardColors(data);
+    }
+
+    // カードの色をデータに応じて更新
+    updateCardColors(data) {
+        const tempCard = document.querySelector('#temperature')?.closest('.card');
+        if (tempCard) {
+            const temp = parseFloat(data.temperature);
+            if (temp < 15) {
+                tempCard.className = 'card status-card bg-info text-white';
+            } else if (temp > 25) {
+                tempCard.className = 'card status-card bg-warning text-white';
             } else {
-                chatDiv.innerHTML += `
-                    <div class="message-container message-ai">
-                        <div class="message-bubble ai">
-                            <i class="fas fa-exclamation-triangle text-danger"></i> 
-                            エラー: ${data.error}
-                        </div>
-                    </div>
-                `;
-                showNotification('AI相談でエラーが発生しました', 'danger');
+                tempCard.className = 'card status-card bg-primary text-white';
             }
-            
-            chatDiv.scrollTop = chatDiv.scrollHeight;
-            questionInput.value = '';
-            
-        } catch (error) {
-            chatDiv.innerHTML = originalContent;
-            chatDiv.innerHTML += `
-                <div class="message-container message-ai">
-                    <div class="message-bubble ai">
-                        <i class="fas fa-exclamation-triangle text-danger"></i> 
-                        エラー: ${error.message}
-                    </div>
-                </div>
-            `;
-            showNotification('AI相談でエラーが発生しました', 'danger');
+        }
+
+        const tankCard = document.querySelector('#tank-level')?.closest('.card');
+        if (tankCard) {
+            const level = parseFloat(data.tank_level);
+            if (level < 20) {
+                tankCard.className = 'card status-card bg-danger text-white';
+            } else if (level < 50) {
+                tankCard.className = 'card status-card bg-warning text-white';
+            } else {
+                tankCard.className = 'card status-card bg-success text-white';
+            }
         }
     }
 
-    // 収穫判断
-    async checkHarvest() {
-        const statusDiv = document.getElementById('harvest-status');
-        const originalContent = showLoading(statusDiv);
-        
+    // 収穫判断結果の更新
+    async updateHarvestStatus() {
         try {
             const data = await apiCall('/api/ai/harvest-judgment', {
                 method: 'POST'
             });
-
             if (data.status === 'success') {
-                const icon = data.harvest_ready ? 
-                    'fas fa-check-circle text-success' : 
-                    'fas fa-clock text-warning';
-                const message = data.harvest_ready ? '収穫可能です！' : 'まだ収穫時期ではありません';
-                
-                statusDiv.innerHTML = `
-                    <div class="harvest-status-card fade-in">
-                        <i class="${icon} harvest-icon"></i>
-                        <h4>${message}</h4>
-                        <div class="mt-3">
-                            <p><strong>信頼度:</strong> ${formatNumber(data.confidence * 100)}%</p>
-                            <p><strong>推奨事項:</strong> ${data.recommendation}</p>
-                            <p><strong>残り日数:</strong> ${data.days_remaining}日</p>
-                        </div>
-                    </div>
-                `;
-                showNotification('収穫判断が完了しました', 'success');
+                this.displayHarvestResult(data);
             } else {
-                statusDiv.innerHTML = `
-                    <div class="text-center">
-                        <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                        <h4>エラーが発生しました</h4>
-                        <p>${data.error}</p>
-                    </div>
-                `;
-                showNotification('収穫判断でエラーが発生しました', 'danger');
+                this.displayHarvestError(data.error);
             }
         } catch (error) {
-            statusDiv.innerHTML = originalContent;
-            statusDiv.innerHTML += `
+            console.error('収穫判断取得エラー:', error);
+            this.displayHarvestError('収穫判断データの取得に失敗しました');
+        }
+    }
+
+    // 収穫判断結果の表示
+    displayHarvestResult(data) {
+        const statusDiv = document.getElementById('harvest-status');
+        const resultDiv = document.getElementById('harvest-result');
+        
+        if (statusDiv && resultDiv) {
+            statusDiv.style.display = 'none';
+            resultDiv.style.display = 'block';
+            
+            const readyElement = document.getElementById('harvest-ready');
+            const confidenceElement = document.getElementById('harvest-confidence');
+            const recommendationElement = document.getElementById('harvest-recommendation');
+            const updatedElement = document.getElementById('harvest-updated');
+            
+            if (readyElement) {
+                readyElement.textContent = data.harvest_ready ? 'はい' : 'いいえ';
+                readyElement.className = `badge ${data.harvest_ready ? 'bg-success' : 'bg-warning'} fs-6`;
+            }
+            
+            if (confidenceElement) {
+                const confidence = Math.round(data.confidence * 100);
+                confidenceElement.textContent = `${confidence}%`;
+                confidenceElement.className = `badge ${confidence > 70 ? 'bg-success' : confidence > 50 ? 'bg-warning' : 'bg-danger'} fs-6`;
+            }
+            
+            if (recommendationElement) {
+                recommendationElement.textContent = data.recommendation || '特にありません';
+            }
+            
+            if (updatedElement) {
+                updatedElement.textContent = formatDate(new Date());
+            }
+        }
+    }
+
+    // 収穫判断エラーの表示
+    displayHarvestError(errorMessage) {
+        const statusDiv = document.getElementById('harvest-status');
+        
+        if (statusDiv) {
+            statusDiv.innerHTML = `
                 <div class="text-center">
                     <i class="fas fa-exclamation-triangle fa-3x text-danger mb-3"></i>
-                    <h4>エラーが発生しました</h4>
-                    <p>${error.message}</p>
+                    <p class="text-danger">${errorMessage}</p>
                 </div>
             `;
-            showNotification('収穫判断でエラーが発生しました', 'danger');
+        }
+    }
+
+    // 最新画像の更新
+    async updateLatestImage() {
+        try {
+            const data = await apiCall('/api/camera/latest');
+            if (data.status === 'success' && data.image_url) {
+                const imgElement = document.getElementById('latest-image');
+                if (imgElement) {
+                    imgElement.src = data.image_url;
+                    imgElement.alt = '最新の豆苗画像';
+                }
+            }
+        } catch (error) {
+            console.error('最新画像取得エラー:', error);
         }
     }
 
     // 自動更新の開始
     startAutoUpdate() {
+        this.stopAutoUpdate();
+        
         this.updateTimer = setInterval(() => {
-            this.updateSystemStatus();
+            if (!this.isUpdating) {
+                this.updateSystemStatus();
+                // 収穫判断は長い間隔で更新
+                if (Math.random() < 0.1) {
+                    this.updateHarvestStatus();
+                }
+            }
         }, this.updateInterval);
+        
+        console.log(`Auto-update started with interval: ${this.updateInterval}ms`);
     }
 
     // 自動更新の停止
@@ -214,21 +326,54 @@ class DashboardManager {
         }
     }
 
+    // チャートの破棄
+    destroyChart() {
+        if (this.temperatureChart) {
+            this.temperatureChart.destroy();
+            this.temperatureChart = null;
+        }
+    }
+
     // クリーンアップ
     cleanup() {
         this.stopAutoUpdate();
+        this.destroyChart();
+        this.isInitialized = false;
+        this.historyLoaded = false;
     }
 }
 
 // ダッシュボードマネージャーのインスタンス
-const dashboardManager = new DashboardManager();
+let dashboardManager = null;
 
 // ページ読み込み完了時の初期化
 document.addEventListener('DOMContentLoaded', function() {
+    if (dashboardManager) {
+        dashboardManager.cleanup();
+    }
+    
+    dashboardManager = new DashboardManager();
     dashboardManager.initialize();
 });
 
 // ページ離脱時のクリーンアップ
 window.addEventListener('beforeunload', function() {
-    dashboardManager.cleanup();
+    if (dashboardManager) {
+        dashboardManager.cleanup();
+        dashboardManager = null;
+    }
+});
+
+// ウィンドウリサイズ時のチャート調整
+let resizeTimeout = null;
+window.addEventListener('resize', function() {
+    if (resizeTimeout) {
+        clearTimeout(resizeTimeout);
+    }
+    
+    resizeTimeout = setTimeout(function() {
+        if (dashboardManager && dashboardManager.temperatureChart) {
+            dashboardManager.temperatureChart.resize();
+        }
+    }, 250);
 });

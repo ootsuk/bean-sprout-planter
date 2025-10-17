@@ -485,3 +485,5 @@ class MultiCameraManager:
         except Exception as e:
             self.logger.error(f"クリーンアップエラー: {str(e)}")
 
+
+

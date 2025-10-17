@@ -432,3 +432,5 @@ class WaterTankManager:
             self.logger.error(f"履歴取得エラー: {str(e)}")
             return {'error': str(e)}
 
+
+

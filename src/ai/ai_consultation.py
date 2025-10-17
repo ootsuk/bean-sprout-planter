@@ -114,6 +114,29 @@ class AIConsultationManager:
 - confidence: 0.0-1.0
 - related_topics: 関連トピック
 - next_steps: 次のステップ
+""",
+            'image_consultation': """
+あなたは豆苗栽培の専門家です。以下の質問と画像を基に回答してください。
+
+質問: {question}
+相談タグ: {tag}
+画像データ: {image_data}
+
+豆苗栽培の基本知識:
+- 発芽温度: 20-25°C
+- 成長温度: 18-22°C
+- 水やり: 1日1-2回
+- 光量: 明るい場所、直射日光は避ける
+- 収穫時期: 7-10日目
+
+画像を詳しく分析し、豆苗の状態を評価してください。
+マークダウン形式で回答し、見出し、リスト、表などを適切に使用してください。
+
+以下の形式で回答してください:
+- answer: 具体的な回答（マークダウン形式）
+- confidence: 0.0-1.0
+- related_topics: 関連トピック
+- next_steps: 次のステップ
 """
         }
     
@@ -234,14 +257,23 @@ class AIConsultationManager:
                 'error': str(e)
             }
     
-    def consult(self, question: str, tag: str = "general") -> Dict[str, Any]:
+    def consult(self, question: str, tag: str = "general", image_data: str = None) -> Dict[str, Any]:
         """一般相談を実行"""
         try:
             # プロンプト作成
-            prompt = self.prompts['general_consultation'].format(
-                question=question,
-                tag=tag
-            )
+            if image_data:
+                # 画像付きの相談
+                prompt = self.prompts['image_consultation'].format(
+                    question=question,
+                    tag=tag,
+                    image_data=image_data
+                )
+            else:
+                # テキストのみの相談
+                prompt = self.prompts['general_consultation'].format(
+                    question=question,
+                    tag=tag
+                )
             
             # AI API呼び出し
             response = self._call_ai_api(prompt, "general_consultation")
@@ -405,4 +437,6 @@ class AIConsultationManager:
             'temperature',  # 温度管理
             'nutrients'     # 栄養管理
         ]
+
+
 

@@ -4,6 +4,125 @@
  * AI相談機能
  */
 
+// マークダウンレンダラー
+class MarkdownRenderer {
+    constructor() {
+        // marked.jsの設定
+        if (typeof marked !== 'undefined') {
+            marked.setOptions({
+                highlight: function(code, lang) {
+                    if (lang && typeof hljs !== 'undefined' && hljs.getLanguage(lang)) {
+                        return hljs.highlight(code, {language: lang}).value;
+                    }
+                    if (typeof hljs !== 'undefined') {
+                        return hljs.highlightAuto(code).value;
+                    }
+                    return code;
+                },
+                breaks: true,
+                gfm: true
+            });
+        }
+    }
+    
+    render(markdownText) {
+        if (typeof marked !== 'undefined') {
+            return marked.parse(markdownText);
+        }
+        // marked.jsが読み込まれていない場合はプレーンテキストを返す
+        return markdownText.replace(/\n/g, '<br>');
+    }
+}
+
+// グローバルインスタンス
+const markdownRenderer = new MarkdownRenderer();
+
+// 画像添付機能
+class ImageAttachment {
+    constructor() {
+        this.attachedImage = null;
+        this.setupEventListeners();
+    }
+    
+    setupEventListeners() {
+        const imageAttachBtn = document.getElementById('image-attach-btn');
+        const imageInput = document.getElementById('image-input');
+        const removeImageBtn = document.getElementById('remove-image-btn');
+        
+        if (imageAttachBtn) {
+            imageAttachBtn.addEventListener('click', () => {
+                imageInput.click();
+            });
+        }
+        
+        if (imageInput) {
+            imageInput.addEventListener('change', (e) => {
+                this.handleImageSelect(e);
+            });
+        }
+        
+        if (removeImageBtn) {
+            removeImageBtn.addEventListener('click', () => {
+                this.removeImage();
+            });
+        }
+    }
+    
+    handleImageSelect(event) {
+        const file = event.target.files[0];
+        if (file) {
+            // ファイルサイズチェック（5MB以下）
+            if (file.size > 5 * 1024 * 1024) {
+                showNotification('画像サイズは5MB以下にしてください', 'warning');
+                return;
+            }
+            
+            // ファイル形式チェック
+            if (!file.type.startsWith('image/')) {
+                showNotification('画像ファイルを選択してください', 'warning');
+                return;
+            }
+            
+            this.attachedImage = file;
+            this.showPreview(file);
+        }
+    }
+    
+    showPreview(file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const preview = document.getElementById('image-preview');
+            const previewImage = document.getElementById('preview-image');
+            
+            if (preview && previewImage) {
+                previewImage.src = e.target.result;
+                preview.style.display = 'block';
+            }
+        };
+        reader.readAsDataURL(file);
+    }
+    
+    removeImage() {
+        this.attachedImage = null;
+        const preview = document.getElementById('image-preview');
+        const imageInput = document.getElementById('image-input');
+        
+        if (preview) {
+            preview.style.display = 'none';
+        }
+        if (imageInput) {
+            imageInput.value = '';
+        }
+    }
+    
+    getAttachedImage() {
+        return this.attachedImage;
+    }
+}
+
+// グローバルインスタンス
+const imageAttachment = new ImageAttachment();
+
 // AI相談管理クラス
 class AIConsultationManager {
     constructor() {
@@ -82,27 +201,35 @@ class AIConsultationManager {
     async sendQuestion() {
         const questionInput = document.getElementById('question-input');
         const question = questionInput.value.trim();
+        const attachedImage = imageAttachment.getAttachedImage();
         
-        if (!question) {
-            showNotification('質問を入力してください', 'warning');
+        if (!question && !attachedImage) {
+            showNotification('質問を入力するか画像を添付してください', 'warning');
             return;
         }
 
         // ユーザーメッセージを表示
-        this.addMessageToChat('user', question);
+        this.addMessageToChat('user', question, false, attachedImage);
         questionInput.value = '';
 
         // ローディング表示
         this.addMessageToChat('ai', '考え中...', true);
 
         try {
-            const data = await apiCall('/api/ai/consultation', {
+            const formData = new FormData();
+            formData.append('question', question);
+            formData.append('tag', this.selectedTag);
+            
+            if (attachedImage) {
+                formData.append('image', attachedImage);
+            }
+
+            const response = await fetch('/api/ai/consultation', {
                 method: 'POST',
-                body: JSON.stringify({
-                    question: question,
-                    tag: this.selectedTag
-                })
+                body: formData
             });
+
+            const data = await response.json();
 
             // ローディングメッセージを削除
             this.removeLastMessage();
@@ -115,6 +242,10 @@ class AIConsultationManager {
                 this.addMessageToChat('ai', `エラー: ${data.error}`, false, 'danger');
                 showNotification('AI相談でエラーが発生しました', 'danger');
             }
+            
+            // 画像をクリア
+            imageAttachment.removeImage();
+            
         } catch (error) {
             this.removeLastMessage();
             this.addMessageToChat('ai', `エラー: ${error.message}`, false, 'danger');
@@ -135,12 +266,21 @@ class AIConsultationManager {
         if (variant === 'danger') {
             variantClass = 'text-danger';
         }
+        
+        let messageContent = message;
+        
+        // AIメッセージの場合はマークダウンをレンダリング
+        if (type === 'ai' && !isLoading) {
+            messageContent = markdownRenderer.render(message);
+        }
 
         messageDiv.className = `message-container ${messageClass}`;
         messageDiv.innerHTML = `
             <div class="message-bubble ${bubbleClass} ${variantClass}">
                 ${isLoading ? '<div class="spinner-border spinner-border-sm me-2"></div>' : `<i class="${icon} me-2"></i>`}
-                ${message}
+                <div class="${type === 'ai' && !isLoading ? 'markdown-content' : ''}">
+                    ${messageContent}
+                </div>
             </div>
             <div class="message-time">${formatDate(new Date())}</div>
         `;
