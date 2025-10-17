@@ -124,8 +124,6 @@ def register_api_blueprints(app: Flask):
     # テスト用APIエンドポイントを登録
     api.add_resource(HealthCheckResource, '/health')
     api.add_resource(SystemStatusResource, '/status')
-    api.add_resource(SensorsCurrentResource, '/sensors/current')
-    api.add_resource(SensorsHistoryResource, '/sensors/temperature/history')
     api.add_resource(AIHarvestJudgmentResource, '/ai/harvest-judgment')
     api.add_resource(CameraLatestResource, '/camera/latest')
     

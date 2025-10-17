@@ -74,17 +74,28 @@
     animation: fadeIn 0.5s ease-out;
 }
 
+/* チャートコンテナのスタイル */
+.chart-container {
+    position: relative;
+    height: 300px;
+    width: 100%;
+}
+
+.chart-container canvas {
+    max-height: 300px !important;
+    max-width: 100% !important;
+    height: 300px !important;
+    width: 100% !important;
+}
+
 /* レスポンシブ調整 */
 @media (max-width: 768px) {
-    .sensor-value {
-        font-size: 2rem;
+    .chart-container {
+        height: 250px;
     }
     
-    .harvest-icon {
-        font-size: 3rem;
-    }
-    
-    .dashboard-header {
-        padding: 1.5rem 0;
+    .chart-container canvas {
+        max-height: 250px !important;
+        height: 250px !important;
     }
 }

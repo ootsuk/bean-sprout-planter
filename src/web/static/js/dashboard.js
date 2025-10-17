@@ -91,7 +91,7 @@ class DashboardManager {
         }
         
         try {
-            const data = await apiCall('/api/sensors/temperature/history');
+            const data = await apiCall('/api/sensors/history?type=temperature');
             if (data.status === 'success' && data.history) {
                 this.updateChartData(data.history);
                 this.historyLoaded = true;
@@ -120,7 +120,8 @@ class DashboardManager {
             
             sampleData.push({
                 timestamp: time.toISOString(),
-                temperature: parseFloat(temperature.toFixed(1))
+                temperature: parseFloat(temperature.toFixed(1)),
+                value: parseFloat(temperature.toFixed(1)) // APIの構造に合わせて追加
             });
         }
 
@@ -140,7 +141,9 @@ class DashboardManager {
                 hour: '2-digit', 
                 minute: '2-digit' 
             }));
-            temperatures.push(item.temperature);
+            // APIが返すデータ構造に応じて値を取得
+            const tempValue = item.temperature !== undefined ? item.temperature : item.value;
+            temperatures.push(tempValue);
         });
 
         this.temperatureChart.data.labels = labels;
@@ -148,25 +151,26 @@ class DashboardManager {
         this.temperatureChart.update('none');
     }
 
-    // 新しいデータをチャートに追加
-    updateChartWithNewData(newData) {
-        if (!this.temperatureChart || !newData) return;
+    // チャートにライブデータを追加
+    addDatapointToChart(timestamp, temperature) {
+        if (!this.temperatureChart) return;
 
-        const labels = this.temperatureChart.data.labels;
-        const temperatures = this.temperatureChart.data.datasets[0].data;
+        const chart = this.temperatureChart;
+        const label = new Date(timestamp).toLocaleTimeString('ja-JP', {
+            hour: '2-digit',
+            minute: '2-digit'
+        });
 
-        // 新しいデータを追加
-        const now = new Date();
-        labels.push(now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }));
-        temperatures.push(newData.temperature);
+        chart.data.labels.push(label);
+        chart.data.datasets[0].data.push(temperature);
 
-        // 古いデータを削除 (24件以上の場合)
-        while (labels.length > 24) {
-            labels.shift();
-            temperatures.shift();
+        // グラフのデータポイント数を制限（例：24件）
+        if (chart.data.labels.length > 24) {
+            chart.data.labels.shift();
+            chart.data.datasets[0].data.shift();
         }
 
-        this.temperatureChart.update('none');
+        chart.update();
     }
 
     // システム状態の更新
@@ -176,21 +180,24 @@ class DashboardManager {
         this.isUpdating = true;
         
         try {
-            const data = await apiCall('/api/sensors/current');
-            if (data.status === 'success') {
+            const data = await apiCall('/api/sensors/data');
+            if (data.status === 'success' && data.data) {
                 this.updateSensorDisplay(data.data);
-                this.updateChartWithNewData(data.data); // グラフを更新
+
+                // 履歴読み込み後にライブデータをチャートに追加
+                if (this.historyLoaded && data.data.temperature !== undefined) {
+                    const timestamp = data.data.timestamp || new Date().toISOString();
+                    this.addDatapointToChart(timestamp, data.data.temperature);
+                }
             }
         } catch (error) {
             console.error('センサーデータ取得エラー:', error);
             // エラー時はサンプルデータを表示
-            const sampleData = {
-                temperature: (20 + Math.random() * 5 - 2.5).toFixed(1),
-                humidity: (50 + Math.random() * 20 - 10).toFixed(1),
-                tank_level: (60 + Math.random() * 30 - 15).toFixed(1)
-            };
-            this.updateSensorDisplay(sampleData);
-            this.updateChartWithNewData(sampleData); // グラフを更新
+            this.updateSensorDisplay({
+                temperature: (20 + Math.random() * 10).toFixed(1),
+                humidity: (50 + Math.random() * 30).toFixed(1),
+                tank_level: (60 + Math.random() * 40).toFixed(1)
+            });
         } finally {
             this.isUpdating = false;
         }

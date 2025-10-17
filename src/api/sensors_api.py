@@ -65,11 +65,9 @@ class SensorsHistoryResource(Resource):
             
             return {
                 "status": "success",
-                "data": {
-                    "history": history,
-                    "total_count": len(history),
-                    "period_hours": hours
-                }
+                "history": history,
+                "total_count": len(history),
+                "period_hours": hours
             }, 200
         except Exception as e:
             logger.error(f"センサーデータ履歴取得エラー: {e}")
