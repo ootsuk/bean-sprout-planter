@@ -148,6 +148,27 @@ class DashboardManager {
         this.temperatureChart.update('none');
     }
 
+    // 新しいデータをチャートに追加
+    updateChartWithNewData(newData) {
+        if (!this.temperatureChart || !newData) return;
+
+        const labels = this.temperatureChart.data.labels;
+        const temperatures = this.temperatureChart.data.datasets[0].data;
+
+        // 新しいデータを追加
+        const now = new Date();
+        labels.push(now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' }));
+        temperatures.push(newData.temperature);
+
+        // 古いデータを削除 (24件以上の場合)
+        while (labels.length > 24) {
+            labels.shift();
+            temperatures.shift();
+        }
+
+        this.temperatureChart.update('none');
+    }
+
     // システム状態の更新
     async updateSystemStatus() {
         if (this.isUpdating) return;
@@ -158,15 +179,18 @@ class DashboardManager {
             const data = await apiCall('/api/sensors/current');
             if (data.status === 'success') {
                 this.updateSensorDisplay(data.data);
+                this.updateChartWithNewData(data.data); // グラフを更新
             }
         } catch (error) {
             console.error('センサーデータ取得エラー:', error);
             // エラー時はサンプルデータを表示
-            this.updateSensorDisplay({
-                temperature: (20 + Math.random() * 10).toFixed(1),
-                humidity: (50 + Math.random() * 30).toFixed(1),
-                tank_level: (60 + Math.random() * 40).toFixed(1)
-            });
+            const sampleData = {
+                temperature: (20 + Math.random() * 5 - 2.5).toFixed(1),
+                humidity: (50 + Math.random() * 20 - 10).toFixed(1),
+                tank_level: (60 + Math.random() * 30 - 15).toFixed(1)
+            };
+            this.updateSensorDisplay(sampleData);
+            this.updateChartWithNewData(sampleData); // グラフを更新
         } finally {
             this.isUpdating = false;
         }
