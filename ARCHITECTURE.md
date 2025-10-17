@@ -153,59 +153,58 @@ def register_api_blueprints(app: Flask):
 ### 🔹 **4. src/ai/ai_consultation.py**（AI判断機能）
 
 **役割:**
-- LLM API連携による豆苗栽培相談
-- 収穫判断、病気診断、調理例の提供
+- マルチモーダルAI（Visionモデル）APIとの連携
+- 画像とセンサーデータを組み合わせた高度な状況判断
+- 収穫判断、病気診断、調理例などを構造化データ（JSON）で提供
 
 **主要なクラス:**
 ```python
 class AIConsultationManager:
     def __init__(self):
         """AI相談マネージャーの初期化"""
-        self.openai_client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
-        self.consultation_history = []
-    
+        # APIクライアントを初期化 (OpenAI, Anthropic, Google AI)
+        self._initialize_clients()
+
     def get_harvest_judgment(self, image_path: str, sensor_data: dict):
         """収穫判断を実行"""
-        # 1. 画像とセンサーデータを分析
-        # 2. LLMに豆苗の成長状況を問い合わせ
-        # 3. 収穫タイミングを判定
+        # 1. 画像をエンコード
+        # 2. Visionモデルに画像とセンサーデータを送信
+        # 3. AIからのJSON応答をパースして返す
         
         return {
-            'harvest_ready': True/False,
-            'confidence': 0.85,
-            'recommendation': '収穫のタイミングです',
-            'days_remaining': 2
+            'harvest_ready': True,
+            'confidence': 0.95,
+            'recommendation': '葉の色も濃く、収穫に最適な状態です。',
+            'days_remaining': 0
         }
     
     def diagnose_disease(self, image_path: str, symptoms: list):
         """病気診断を実行"""
-        # 1. 画像から病気の兆候を検出
-        # 2. 症状リストと照合
-        # 3. 診断結果と対処法を提供
+        # 1. 画像をエンコード
+        # 2. Visionモデルに画像と症状を送信
+        # 3. AIからのJSON応答をパースして返す
         
         return {
-            'disease_detected': 'うどんこ病',
-            'confidence': 0.92,
-            'treatment': '重曹水の散布を推奨',
-            'prevention': '通風を良くする'
+            'disease_detected': '健康',
+            'confidence': 0.98,
+            'treatment': '現在のところ対処の必要はありません。',
+            'prevention': '引き続き通気性を確保してください。'
         }
     
     def get_cooking_suggestions(self, harvest_data: dict):
         """調理例を提供"""
-        # 1. 収穫した豆苗の状態を分析
-        # 2. 最適な調理法を提案
+        # 1. LLMに収穫データを送信
+        # 2. AIからのJSON応答をパースして返す
         
         return {
-            'recommended_dishes': ['豆苗炒め', '豆苗スープ'],
-            'cooking_tips': '茎の部分は火を通しすぎない',
-            'nutrition_info': 'ビタミンCが豊富'
+            'recommended_dishes': ['豆苗と豚肉の炒め物', '豆苗のナムル'],
+            'cooking_tips': 'シャキシャキ感を残すため、加熱は短時間で。',
+            'nutrition_info': 'ビタミンK、ビタミンA、葉酸が豊富です。'
         }
 ```
 
 **連携先:**
 - `src/api/ai_api.py` - AI相談API
-- `src/camera/camera.py` - 画像取得
-- `src/sensors/sensor_manager.py` - センサーデータ
 
 ---
 
@@ -213,14 +212,16 @@ class AIConsultationManager:
 
 **役割:**
 - AI相談機能のRESTful API提供
+- カメラ、センサーモジュールと連携し、リアルタイムデータでAIを呼び出し
 
 **APIエンドポイント:**
 ```
-POST /api/ai/consultation     - 一般相談
-POST /api/ai/harvest-judgment - 収穫判断
-POST /api/ai/disease-check    - 病気診断
-POST /api/ai/cooking-tips     - 調理例
-GET  /api/ai/tags            - 相談タグ一覧
+POST /api/ai/consultation       - 一般相談（画像付き対応）
+POST /api/ai/harvest-judgment   - 収穫判断（画像・センサーデータ連携）
+POST /api/ai/disease-check      - 病気診断
+POST /api/ai/cooking-tips       - 調理例提案
+GET  /api/ai/tags              - 相談タグ一覧取得
+GET  /api/ai/history           - 相談履歴取得
 ```
 
 **主要なクラス:**
@@ -392,14 +393,14 @@ class WaterTankManager:
 
 3. src/api/ai_api.py
    ├── HarvestJudgmentResource.post()
+   │   ├── camera_manager.get_latest_image_path()  <- 最新画像取得
+   │   └── sensor_manager.get_all_sensors_data() <- 最新センサーデータ取得
    └── ai_manager.get_harvest_judgment()
    ↓
 
 4. src/ai/ai_consultation.py
-   ├── 最新画像取得
-   ├── センサーデータ取得
-   ├── LLM API呼び出し
-   └── 判断結果生成
+   ├── VisionモデルAPI呼び出し（画像＋センサーデータ）
+   └── JSON応答をパース
    ↓
 
 5. ブラウザに結果表示
@@ -450,11 +451,12 @@ src/api/api_blueprint.py
   └─ depends on: src/api/ai_api.py
 
 src/api/ai_api.py
-  └─ depends on: src/ai/ai_consultation.py
-
-src/ai/ai_consultation.py
+  ├─ depends on: src/ai/ai_consultation.py
   ├─ depends on: src/camera/multi_camera_manager.py
   └─ depends on: src/sensors/sensor_manager.py
+
+src/ai/ai_consultation.py
+  └─ depends on: Vision Model APIs (External)
 
 src/camera/multi_camera_manager.py
   └─ depends on: src/settings/settings_manager.py

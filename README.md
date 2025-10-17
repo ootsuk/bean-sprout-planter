@@ -91,9 +91,12 @@ python main.py
 - `POST /api/camera/schedule` - 撮影スケジュール設定
 
 ### AI相談API
-- `POST /api/ai/consultation` - AI相談
-- `GET /api/ai/tags` - 相談タグ一覧取得
-- `POST /api/ai/harvest-judgment` - 収穫判断
+- `POST /api/ai/consultation` - AI相談（画像付き対応）
+- `POST /api/ai/harvest-judgment` - 収穫判断（画像・センサーデータ連携）
+- `POST /api/ai/disease-check` - 病気診断
+- `POST /api/ai/cooking-tips` - 調理例提案
+- `GET  /api/ai/tags` - 相談タグ一覧取得
+- `GET  /api/ai/history` - 相談履歴取得
 
 ### 設定API
 - `GET/POST /api/settings/` - 設定取得・保存
@@ -195,16 +198,16 @@ git merge integration/test-all-features
 ## 📊 実装状況
 
 ### ✅ 完成済み
-- [x] APIレイヤー（6ファイル、18エンドポイント）
+- [x] APIレイヤー（6ファイル、21エンドポイント）
 - [x] センサーシステム（5ファイル、3種類のセンサー）
+- [x] 給水タンク残量計算機能
 - [x] カメラ撮影機能（多層化対応）
+- [x] AI判断機能（収穫判断、病気診断、調理例）
 - [x] Web UI（ダッシュボード・設定画面・AI相談）
 - [x] 設定の永続化
 - [x] 統合テストフレームワーク
 
 ### ⏳ 開発中
-- [ ] AI判断機能（収穫判断、病気診断、調理例）
-- [ ] 給水タンク残量計算機能
 - [ ] 撮影スケジュール機能
 - [ ] 多層化カメラ管理
 - [ ] 外部アクセス機能
