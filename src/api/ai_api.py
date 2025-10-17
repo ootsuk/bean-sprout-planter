@@ -8,6 +8,8 @@ AI相談機能のRESTful API
 from flask import Blueprint, request, jsonify
 from flask_restful import Resource, Api
 from src.ai.ai_consultation import AIConsultationManager
+from src.camera.multi_camera_manager import MultiCameraManager
+from src.sensors.sensor_manager import SensorManager
 import logging
 import base64
 from PIL import Image
@@ -17,8 +19,10 @@ import io
 ai_bp = Blueprint('ai', __name__)
 api = Api(ai_bp)
 
-# AI相談マネージャーのインスタンス
+# マネージャーのインスタンス化
 ai_manager = AIConsultationManager()
+camera_manager = MultiCameraManager()
+sensor_manager = SensorManager()
 
 
 class AIConsultationResource(Resource):
@@ -90,17 +94,21 @@ class HarvestJudgmentResource(Resource):
     def post(self):
         """収穫判断を実行"""
         try:
-            # 最新の画像とセンサーデータを取得（モック）
-            image_path = "plant_images/latest.jpg"  # 実際の実装では最新画像を取得
-            sensor_data = {
-                'temperature': 22.5,
-                'humidity': 65.0,
-                'soil_moisture': 45.0
-            }
+            # 最新の画像とセンサーデータを取得
+            image_path = camera_manager.get_latest_image_path()
+            if not image_path:
+                return {'error': '画像が見つかりません'}, 404
+
+            sensor_data = sensor_manager.get_all_sensors_data()
+            if not sensor_data:
+                return {'error': 'センサーデータが見つかりません'}, 404
             
             # AI判断を実行
             judgment = ai_manager.get_harvest_judgment(image_path, sensor_data)
             
+            if 'error' in judgment:
+                return {'error': judgment['error']}, 500
+
             return {
                 'status': 'success',
                 'harvest_ready': judgment.get('harvest_ready', False),
@@ -127,11 +135,18 @@ class DiseaseCheckResource(Resource):
                 return {'error': 'リクエストボディが必要です'}, 400
             
             symptoms = data.get('symptoms', [])
-            image_path = "plant_images/latest.jpg"  # 実際の実装では最新画像を取得
+
+            # 最新の画像を取得
+            image_path = camera_manager.get_latest_image_path()
+            if not image_path:
+                return {'error': '画像が見つかりません'}, 404
             
             # 病気診断を実行
             diagnosis = ai_manager.diagnose_disease(image_path, symptoms)
             
+            if 'error' in diagnosis:
+                return {'error': diagnosis['error']}, 500
+
             return {
                 'status': 'success',
                 'disease_detected': diagnosis.get('disease_detected', '健康'),
