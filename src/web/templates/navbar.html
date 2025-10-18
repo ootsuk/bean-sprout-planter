@@ -1,0 +1,36 @@
+<!-- ナビゲーションバー - 共通テンプレート -->
+<nav class="navbar navbar-expand-lg navbar-dark bg-success">
+    <div class="container">
+        <a class="navbar-brand" href="/">
+            <i class="fas fa-seedling"></i> 豆苗プランター
+        </a>
+        
+        <button
+            class="navbar-toggler"
+            type="button"
+            data-bs-toggle="collapse"
+            data-bs-target="#navbarNav"
+            aria-controls="navbarNav"
+            aria-expanded="false"
+            aria-label="Toggle navigation"
+        >
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse navbar-overlay" id="navbarNav">
+            <div class="navbar-nav ms-auto">
+                {% for item in navbar_items %}
+                    {% if request.endpoint and request.endpoint.replace('_', '-') == item.key %}
+                        <a class="nav-link active" href="{{ item.url }}">
+                            <i class="{{ item.icon }}"></i> {{ item.name }}
+                        </a>
+                    {% else %}
+                        <a class="nav-link" href="{{ item.url }}">
+                            <i class="{{ item.icon }}"></i> {{ item.name }}
+                        </a>
+                    {% endif %}
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</nav>

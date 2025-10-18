@@ -28,18 +28,38 @@ def create_app():
     logger = logging.getLogger(__name__)
     
     # ========================================
+    # テンプレート変数（ナビゲーションデータ）
+    # ========================================
+    
+    @app.context_processor
+    def inject_navbar_data():
+        """ナビゲーションバーのデータをテンプレートに注入"""
+        return {
+            'navbar_items': [
+                {'name': 'ダッシュボード', 'url': '/', 'icon': 'fas fa-tachometer-alt', 'key': 'dashboard'},
+                {'name': 'AI相談チャット', 'url': '/ai-consultation', 'icon': 'fas fa-robot', 'key': 'ai-consultation'},
+                {'name': 'カメラ管理', 'url': '/multi-camera', 'icon': 'fas fa-camera', 'key': 'multi-camera'},
+                {'name': '給水タンク', 'url': '/water-tank', 'icon': 'fas fa-tint', 'key': 'water-tank'},
+                {'name': '成長記録', 'url': '/records', 'icon': 'fas fa-chart-line', 'key': 'records'},
+                {'name': 'システムログ', 'url': '/logs', 'icon': 'fas fa-file-alt', 'key': 'logs'},
+                {'name': 'システム設定', 'url': '/settings', 'icon': 'fas fa-cog', 'key': 'settings'},
+            ]
+        }
+    
+    # ========================================
     # 画面表示ルート（HTMLページ）
     # ========================================
     
-    @app.route('/')
-    def index():
-        """メインページ"""
-        return render_template('index.html')
+
     
-    @app.route('/dashboard')
+
+    
+    @app.route('/')
     def dashboard():
         """ダッシュボードページ"""
         return render_template('dashboard.html')
+    
+
     
     @app.route('/settings')
     def settings():

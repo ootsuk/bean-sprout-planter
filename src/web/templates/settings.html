@@ -9,22 +9,7 @@
     <link href="{{ url_for('static', filename='css/common.css') }}" rel="stylesheet">
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-success">
-        <div class="container">
-            <a class="navbar-brand" href="/">
-                <i class="fas fa-seedling"></i> 豆苗プランター
-            </a>
-            <div class="navbar-nav ms-auto">
-                <a class="nav-link" href="/dashboard">ダッシュボード</a>
-                <a class="nav-link" href="/ai-consultation">AI相談</a>
-                <a class="nav-link" href="/multi-camera">カメラ管理</a>
-                <a class="nav-link" href="/water-tank">給水タンク</a>
-                <a class="nav-link" href="/records">記録</a>
-                <a class="nav-link" href="/logs">ログ</a>
-                <a class="nav-link active" href="/settings">設定</a>
-            </div>
-        </div>
-    </nav>
+    {% include 'navbar.html' %}
 
     <div class="container mt-4">
         <div class="row">
