@@ -86,6 +86,11 @@ def create_app():
         """ログページ"""
         return render_template('logs.html')
     
+    @app.route('/records')
+    def records():
+        """成長記録ページ"""
+        return render_template('records.html')
+    
     # ========================================
     # エラーハンドラー
     # ========================================
