@@ -6,6 +6,7 @@
 import threading
 import time
 import logging
+from datetime import datetime
 from typing import Dict, Any, List, Optional
 from .temperature_humidity import AHT25Sensor
 from .soil_moisture import SEN0193Sensor
@@ -82,22 +83,107 @@ class SensorManager:
                 self.logger.error(f"監視ループエラー: {str(e)}")
                 time.sleep(10)
     
-    def read_all_sensors(self) -> Dict[str, Any]:
-        """全センサーのデータを読み取る"""
-        results = {}
-        
-        for sensor_name, sensor in self.sensors.items():
-            if sensor.is_enabled:
-                data = sensor.read_data()
-                results[sensor_name] = data
-                
-                # キャッシュに保存
-                self.data_cache[sensor_name] = {
-                    'data': data,
-                    'timestamp': time.time()
-                }
-        
-        return results
+    def read_all_sensors_once(self) -> Dict[str, Any]:
+        """全センサーのデータを一度だけ読み取る（スケジューラー用）"""
+        try:
+            results = {}
+            
+            for sensor_name, sensor in self.sensors.items():
+                if sensor.is_enabled:
+                    data = sensor.read_data()
+                    results[sensor_name] = data
+                    
+                    # キャッシュに保存
+                    self.data_cache[sensor_name] = {
+                        'data': data,
+                        'timestamp': time.time()
+                    }
+            
+            # データベースに保存
+            self._save_sensor_data_to_db(results)
+            
+            return results
+            
+        except Exception as e:
+            self.logger.error(f"センサー読み取りエラー: {str(e)}")
+            return {}
+    
+    def read_temperature_humidity_once(self) -> Dict[str, Any]:
+        """温湿度センサーのみを読み取る（スケジューラー用）"""
+        try:
+            if 'temperature_humidity' in self.sensors:
+                sensor = self.sensors['temperature_humidity']
+                if sensor.is_enabled:
+                    data = sensor.read_data()
+                    self.data_cache['temperature_humidity'] = {
+                        'data': data,
+                        'timestamp': time.time()
+                    }
+                    
+                    # データベースに保存
+                    self._save_sensor_data_to_db({'temperature_humidity': data})
+                    
+                    return data
+            
+            return {}
+            
+        except Exception as e:
+            self.logger.error(f"温湿度センサー読み取りエラー: {str(e)}")
+            return {}
+    
+    def read_soil_moisture_once(self) -> Dict[str, Any]:
+        """土壌水分センサーのみを読み取る（スケジューラー用）"""
+        try:
+            if 'soil_moisture' in self.sensors:
+                sensor = self.sensors['soil_moisture']
+                if sensor.is_enabled:
+                    data = sensor.read_data()
+                    self.data_cache['soil_moisture'] = {
+                        'data': data,
+                        'timestamp': time.time()
+                    }
+                    
+                    # データベースに保存
+                    self._save_sensor_data_to_db({'soil_moisture': data})
+                    
+                    return data
+            
+            return {}
+            
+        except Exception as e:
+            self.logger.error(f"土壌水分センサー読み取りエラー: {str(e)}")
+            return {}
+    
+    def _save_sensor_data_to_db(self, sensor_data: Dict[str, Any]):
+        """センサーデータをデータベースに保存"""
+        try:
+            from src.data.data_manager import data_manager
+            
+            # 統合データを作成
+            integrated_data = {
+                'timestamp': datetime.now().isoformat(),
+                'temperature': None,
+                'humidity': None,
+                'soil_moisture': None,
+                'tank_level': None,
+                'sensor_status': 'active'
+            }
+            
+            # 各センサーのデータを統合
+            for sensor_name, data in sensor_data.items():
+                if sensor_name == 'temperature_humidity':
+                    integrated_data['temperature'] = data.get('temperature')
+                    integrated_data['humidity'] = data.get('humidity')
+                elif sensor_name == 'soil_moisture':
+                    integrated_data['soil_moisture'] = data.get('soil_moisture')
+                elif sensor_name == 'water_level':
+                    integrated_data['tank_level'] = data.get('tank_level')
+            
+            # データベースに保存
+            data_manager.save_sensor_data(integrated_data)
+            
+        except Exception as e:
+            self.logger.error(f"センサーデータ保存エラー: {str(e)}")
     
     def get_sensor_data(self, sensor_name: str = None) -> Optional[Dict[str, Any]]:
         """センサーデータを取得（キャッシュから）"""
@@ -141,3 +227,5 @@ class SensorManager:
             'water_level': water_data.get('level'),
             'timestamp': time.time()
         }
+    # グローバルインスタンス
+sensor_manager = SensorManager()

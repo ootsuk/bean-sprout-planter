@@ -56,7 +56,14 @@ class SettingsResource(Resource):
                 return {"status": "error", "message": "設定データが必要です"}, 400
             
             # 設定更新
-            data_manager.update_config(data)
+            data_manager.update_settings(data)
+            
+            # スケジューラーを再スケジュール
+            try:
+                from src.utils.scheduler import scheduler_manager
+                scheduler_manager.reschedule_all()
+            except Exception as e:
+                logger.warning(f"スケジューラー再スケジュールエラー: {e}")
             
             return {
                 "status": "success",
@@ -91,9 +98,16 @@ class SettingsSensorsResource(Resource):
                 return {"status": "error", "message": "センサー設定データが必要です"}, 400
             
             # 設定更新
-            config = data_manager.get_config()
+            config = data_manager.get_settings()
             config['sensors'] = data
-            data_manager.update_config(config)
+            data_manager.update_settings(config)
+            
+            # スケジューラーを再スケジュール
+            try:
+                from src.utils.scheduler import scheduler_manager
+                scheduler_manager.reschedule_all()
+            except Exception as e:
+                logger.warning(f"スケジューラー再スケジュールエラー: {e}")
             
             return {
                 "status": "success",
@@ -128,9 +142,16 @@ class SettingsWateringResource(Resource):
                 return {"status": "error", "message": "給水設定データが必要です"}, 400
             
             # 設定更新
-            config = data_manager.get_config()
+            config = data_manager.get_settings()
             config['watering'] = data
-            data_manager.update_config(config)
+            data_manager.update_settings(config)
+            
+            # スケジューラーを再スケジュール
+            try:
+                from src.utils.scheduler import scheduler_manager
+                scheduler_manager.reschedule_all()
+            except Exception as e:
+                logger.warning(f"スケジューラー再スケジュールエラー: {e}")
             
             return {
                 "status": "success",
@@ -165,9 +186,16 @@ class SettingsCameraResource(Resource):
                 return {"status": "error", "message": "カメラ設定データが必要です"}, 400
             
             # 設定更新
-            config = data_manager.get_config()
+            config = data_manager.get_settings()
             config['camera'] = data
-            data_manager.update_config(config)
+            data_manager.update_settings(config)
+            
+            # スケジューラーを再スケジュール
+            try:
+                from src.utils.scheduler import scheduler_manager
+                scheduler_manager.reschedule_all()
+            except Exception as e:
+                logger.warning(f"スケジューラー再スケジュールエラー: {e}")
             
             return {
                 "status": "success",

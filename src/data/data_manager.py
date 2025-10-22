@@ -118,6 +118,15 @@ class DataManager:
                     )
                 """)
                 
+                # 設定テーブル
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS settings (
+                        key TEXT PRIMARY KEY,
+                        value TEXT NOT NULL,
+                        updated_at TEXT NOT NULL
+                    )
+                """)
+                
                 conn.commit()
                 logger.info("データベース初期化完了")
                 
@@ -472,14 +481,106 @@ class DataManager:
             return False
     
     def get_config(self) -> Dict:
-        """設定の取得"""
-        return self.config.copy()
+        """設定の取得（後方互換性のため残す）"""
+        return self.get_settings()
     
     def update_config(self, new_config: Dict):
-        """設定の更新"""
-        self.config.update(new_config)
-        self._save_config(self.config)
-        logger.info("設定を更新しました")
+        """設定の更新（後方互換性のため残す）"""
+        self.update_settings(new_config)
+    
+    def get_settings(self) -> Dict:
+        """SQLiteから設定を取得"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT key, value FROM settings")
+                rows = cursor.fetchall()
+                
+                if not rows:
+                    # 初回起動時はconfig.jsonから移行
+                    return self._migrate_from_config_json()
+                
+                settings = {}
+                for key, value in rows:
+                    settings[key] = json.loads(value)
+                
+                return settings
+        except Exception as e:
+            logger.error(f"設定取得エラー: {e}")
+            return {}
+    
+    def update_settings(self, new_settings: Dict):
+        """SQLiteに設定を更新"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                current_time = datetime.now().isoformat()
+                
+                for key, value in new_settings.items():
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO settings (key, value, updated_at)
+                        VALUES (?, ?, ?)
+                    """, (key, json.dumps(value), current_time))
+                
+                conn.commit()
+                logger.info("設定をSQLiteに更新しました")
+        except Exception as e:
+            logger.error(f"設定更新エラー: {e}")
+    
+    def get_setting_section(self, section: str) -> Dict:
+        """特定のセクションの設定を取得"""
+        settings = self.get_settings()
+        return settings.get(section, {})
+    
+    def _migrate_from_config_json(self) -> Dict:
+        """config.jsonからSQLiteに移行"""
+        try:
+            if self.config_path.exists():
+                with open(self.config_path, 'r', encoding='utf-8') as f:
+                    config = json.load(f)
+                
+                # SQLiteに保存
+                self.update_settings(config)
+                
+                # config.jsonをバックアップ
+                backup_path = self.config_path.with_suffix('.json.bak')
+                self.config_path.rename(backup_path)
+                
+                logger.info(f"config.jsonからSQLiteに移行完了: {backup_path}")
+                return config
+            else:
+                # デフォルト設定を作成
+                default_config = {
+                    "sensors": {
+                        "check_interval": 60,
+                        "temperature_humidity_interval": 1800,
+                        "soil_moisture_interval": 300
+                    },
+                    "watering": {
+                        "soil_moisture_threshold": 159,
+                        "watering_interval_hours": 12,
+                        "watering_duration_seconds": 5,
+                        "water_amount_ml": 100
+                    },
+                    "camera": {
+                        "resolution_width": 1280,
+                        "resolution_height": 720,
+                        "auto_capture_time": "06:00"
+                    },
+                    "ai": {
+                        "model": "gpt-4",
+                        "max_tokens": 1000
+                    },
+                    "notifications": {
+                        "line_notify_enabled": False,
+                        "email_enabled": False
+                    }
+                }
+                self.update_settings(default_config)
+                return default_config
+        except Exception as e:
+            logger.error(f"設定移行エラー: {e}")
+            return {}
     
     def cleanup_old_data(self, days: int = 90):
         """古いデータの削除"""

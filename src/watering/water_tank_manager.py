@@ -267,7 +267,126 @@ class WaterTankManager:
             self.logger.error(f"タンク状態取得エラー: {str(e)}")
             return {'error': str(e)}
     
-    def get_usage_statistics(self, days: int = 7) -> Dict[str, Any]:
+    def evaluate_and_water_once(self) -> Dict[str, Any]:
+        """給水判定と実行を一度だけ行う（スケジューラー用）"""
+        try:
+            self.logger.info("給水チェックを開始します")
+            
+            # 設定を取得
+            watering_config = self.data_manager.get_setting_section('watering')
+            soil_moisture_threshold = watering_config.get('soil_moisture_threshold', 159)
+            watering_duration_seconds = watering_config.get('watering_duration_seconds', 5)
+            water_amount_ml = watering_config.get('water_amount_ml', 100)
+            
+            # 土壌水分センサーから現在の値を取得
+            current_moisture = self._get_current_soil_moisture()
+            
+            result = {
+                'timestamp': datetime.now().isoformat(),
+                'current_moisture': current_moisture,
+                'threshold': soil_moisture_threshold,
+                'watering_needed': False,
+                'watering_executed': False,
+                'water_amount': 0,
+                'reason': ''
+            }
+            
+            # 給水判定
+            if current_moisture is not None and current_moisture < soil_moisture_threshold:
+                result['watering_needed'] = True
+                result['reason'] = f'土壌水分が閾値以下です ({current_moisture} < {soil_moisture_threshold})'
+                
+                # 給水実行
+                watering_result = self._execute_watering(water_amount_ml, watering_duration_seconds)
+                result.update(watering_result)
+            else:
+                result['reason'] = f'土壌水分が十分です ({current_moisture} >= {soil_moisture_threshold})'
+            
+            # 履歴保存
+            self._save_watering_history(result)
+            
+            self.logger.info(f"給水チェック完了: {result['reason']}")
+            return result
+            
+        except Exception as e:
+            self.logger.error(f"給水チェックエラー: {e}")
+            return {
+                'timestamp': datetime.now().isoformat(),
+                'error': str(e),
+                'watering_executed': False
+            }
+    
+    def _get_current_soil_moisture(self) -> Optional[int]:
+        """現在の土壌水分値を取得"""
+        try:
+            from src.sensors.sensor_manager import sensor_manager
+            
+            # センサーマネージャーから最新の土壌水分データを取得
+            soil_data = sensor_manager.get_sensor_data('soil_moisture')
+            if soil_data and 'soil_moisture' in soil_data:
+                return soil_data['soil_moisture']
+            
+            return None
+            
+        except Exception as e:
+            self.logger.error(f"土壌水分取得エラー: {e}")
+            return None
+    
+    def _execute_watering(self, amount_ml: int, duration_seconds: int) -> Dict[str, Any]:
+        """実際の給水実行"""
+        try:
+            # タンク残量チェック
+            if self.current_volume < amount_ml:
+                return {
+                    'watering_executed': False,
+                    'water_amount': 0,
+                    'reason': f'タンク残量不足 ({self.current_volume}ml < {amount_ml}ml)'
+                }
+            
+            # 給水実行（シミュレーション）
+            self.logger.info(f"給水実行: {amount_ml}ml, {duration_seconds}秒")
+            
+            # 実際のハードウェア制御はここに実装
+            # 例: GPIO制御でポンプを動作させる
+            
+            # タンク残量を更新
+            self.current_volume -= amount_ml
+            
+            return {
+                'watering_executed': True,
+                'water_amount': amount_ml,
+                'duration_seconds': duration_seconds,
+                'reason': '給水実行完了'
+            }
+            
+        except Exception as e:
+            self.logger.error(f"給水実行エラー: {e}")
+            return {
+                'watering_executed': False,
+                'water_amount': 0,
+                'reason': f'給水実行エラー: {str(e)}'
+            }
+    
+    def _save_watering_history(self, result: Dict[str, Any]):
+        """給水履歴を保存"""
+        try:
+            history_data = {
+                'timestamp': result['timestamp'],
+                'amount': result.get('water_amount', 0),
+                'duration': result.get('duration_seconds', 0),
+                'success': result.get('watering_executed', False),
+                'reason': result.get('reason', '')
+            }
+            
+            if self.data_manager:
+                self.data_manager.save_watering_history(history_data)
+                
+        except Exception as e:
+            self.logger.error(f"給水履歴保存エラー: {e}")
+    
+    def initialize(self, data_manager):
+        """データマネージャーを設定"""
+        self.data_manager = data_manager
         """使用統計を取得"""
         try:
             cutoff_date = datetime.now() - timedelta(days=days)
@@ -433,4 +552,6 @@ class WaterTankManager:
             return {'error': str(e)}
 
 
+# グローバルインスタンス
+water_tank_manager = WaterTankManager()
 
