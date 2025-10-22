@@ -6,7 +6,6 @@
 - センサー設定
 - 給水設定
 - カメラ設定
-- AI設定
 - 通知設定
 """
 
@@ -206,59 +205,6 @@ class SettingsCameraResource(Resource):
             return {"status": "error", "message": str(e)}, 500
 
 
-class SettingsAIResource(Resource):
-    """AI設定"""
-    
-    def get(self):
-        try:
-            config = data_manager.get_config()
-            ai_config = config.get('ai', {})
-            
-            # APIキーはマスク
-            if 'api_keys' in ai_config:
-                masked_keys = {}
-                for key, value in ai_config['api_keys'].items():
-                    if value:
-                        masked_keys[key] = '***'
-                    else:
-                        masked_keys[key] = ''
-                ai_config['api_keys'] = masked_keys
-            
-            return {
-                "status": "success",
-                "data": ai_config
-            }, 200
-        except Exception as e:
-            logger.error(f"AI設定取得エラー: {e}")
-            return {"status": "error", "message": str(e)}, 500
-    
-    def post(self):
-        try:
-            data = request.get_json()
-            
-            if not data:
-                return {"status": "error", "message": "AI設定データが必要です"}, 400
-            
-            # 設定更新
-            config = data_manager.get_config()
-            config['ai'] = data
-            data_manager.update_config(config)
-            
-            # 環境変数も更新
-            if 'api_keys' in data:
-                for key, value in data['api_keys'].items():
-                    if value and value != '***':
-                        os.environ[f"{key.upper()}_API_KEY"] = value
-            
-            return {
-                "status": "success",
-                "message": "AI設定を更新しました"
-            }, 200
-        except Exception as e:
-            logger.error(f"AI設定更新エラー: {e}")
-            return {"status": "error", "message": str(e)}, 500
-
-
 class SettingsNotificationsResource(Resource):
     """通知設定"""
     
@@ -399,7 +345,6 @@ api.add_resource(SettingsResource, '/')
 api.add_resource(SettingsSensorsResource, '/sensors')
 api.add_resource(SettingsWateringResource, '/watering')
 api.add_resource(SettingsCameraResource, '/camera')
-api.add_resource(SettingsAIResource, '/ai')
 api.add_resource(SettingsNotificationsResource, '/notifications')
 api.add_resource(SettingsExportResource, '/export')
 api.add_resource(SettingsImportResource, '/import')

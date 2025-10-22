@@ -47,7 +47,7 @@ class SensorsHistoryResource(Resource):
     def get(self):
         try:
             hours = request.args.get('hours', 24, type=int)
-            sensor_type = request.args.get('type')  # temperature, humidity, soil_moisture
+            sensor_type = request.args.get('type')  # temperature, humidity, water_pressure
             
             # データベースから履歴を取得
             history = data_manager.get_sensor_data(hours)
@@ -150,7 +150,7 @@ class SensorsStatisticsResource(Resource):
                     "period_days": days,
                     "temperature": sensor_stats.get('temperature', {}),
                     "humidity": sensor_stats.get('humidity', {}),
-                    "soil_moisture": sensor_stats.get('soil_moisture', {})
+                    "water_pressure": sensor_stats.get('water_pressure', {})
                 }
             }, 200
         except Exception as e:

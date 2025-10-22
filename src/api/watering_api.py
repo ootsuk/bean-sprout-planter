@@ -236,18 +236,22 @@ class WateringCheckResource(Resource):
             from src.sensors.sensor_manager import sensor_manager
             
             sensor_data = sensor_manager.read_all_sensors()
-            current_moisture = sensor_data.soil_moisture
+            # TODO: 水圧センサーによる給水判定を実装
+            current_pressure = None  # 水圧センサーから取得予定
             
-            # 給水が必要かチェック
-            result = water_tank_manager.check_watering_needed(current_moisture)
+            # 給水が必要かチェック（水圧センサー使用予定）
+            result = {
+                "status": "success",
+                "watering_needed": False,
+                "reason": "水圧センサーによる給水判定は今後実装予定"
+            }
             
             return {
                 "status": "success",
                 "data": {
-                    "current_moisture": current_moisture,
-                    "watering_needed": result['needed'],
-                    "reason": result.get('reason', ''),
-                    "recommended_amount": result.get('recommended_amount', 0)
+                    "current_pressure": current_pressure,
+                    "watering_needed": result.get("watering_needed", False),
+                    "reason": result.get("reason", "")
                 }
             }, 200
         except Exception as e:

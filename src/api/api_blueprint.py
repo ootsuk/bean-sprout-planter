@@ -75,7 +75,7 @@ def register_api_blueprints(app: Flask):
                 'data': {
                     'temperature': round(20 + random.random() * 10, 1),
                     'humidity': round(50 + random.random() * 30, 1),
-                    'tank_level': round(60 + random.random() * 40, 1)
+                    'water_pressure': round(0.5 + random.random() * 0.5, 3)
                 }
             }
 

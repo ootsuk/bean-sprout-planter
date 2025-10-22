@@ -42,7 +42,7 @@ class SchedulerManager:
             
             # ジョブストア設定（SQLite）
             jobstores = {
-                'default': SQLAlchemyJobStore(url='sqlite:///data/scheduler_jobs.db')
+                'default': SQLAlchemyJobStore(url='sqlite:///data/scheduler.db')
             }
             
             # エグゼキューター設定
@@ -142,13 +142,13 @@ class SchedulerManager:
                 replace_existing=True
             )
         
-        soil_moisture_interval = sensor_config.get('soil_moisture_interval', 300)
+        soil_moisture_interval = sensor_config.get('water_pressure_interval', 300)
         if soil_moisture_interval != check_interval:
             self.scheduler.add_job(
-                func=self._soil_moisture_job,
+                func=self._water_pressure_job,
                 trigger=IntervalTrigger(seconds=soil_moisture_interval),
-                id='soil_moisture',
-                name='土壌水分センサー',
+                id='water_pressure',
+                name='水圧センサー',
                 replace_existing=True
             )
     
@@ -202,14 +202,15 @@ class SchedulerManager:
         except Exception as e:
             logger.error(f"温湿度センサージョブエラー: {e}")
     
-    def _soil_moisture_job(self):
-        """土壌水分センサージョブ実行"""
+    def _water_pressure_job(self):
+        """水圧センサージョブ実行"""
         try:
-            logger.info("土壌水分センサージョブ実行")
+            logger.info("水圧センサージョブ実行")
             if self.sensor_manager:
-                self.sensor_manager.read_soil_moisture_once()
+                # TODO: 水圧センサーの読み取りメソッドを実装
+                logger.warning("水圧センサーの読み取りメソッドは未実装です")
         except Exception as e:
-            logger.error(f"土壌水分センサージョブエラー: {e}")
+            logger.error(f"水圧センサージョブエラー: {e}")
     
     def _watering_check_job(self):
         """給水チェックジョブ実行"""

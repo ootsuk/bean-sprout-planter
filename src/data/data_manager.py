@@ -38,7 +38,7 @@ class DataManager:
         self.data_dir.mkdir(parents=True, exist_ok=True)
         
         # データベースファイル
-        self.db_path = self.data_dir / "bean_sprout_data.db"
+        self.db_path = self.data_dir / "main.db"
         
         # 設定ファイル
         self.config_path = self.data_dir / "config.json"
@@ -62,8 +62,7 @@ class DataManager:
                         timestamp TEXT NOT NULL,
                         temperature REAL,
                         humidity REAL,
-                        soil_moisture INTEGER,
-                        tank_level BOOLEAN,
+                        water_pressure REAL,
                         sensor_status TEXT
                     )
                 """)
@@ -130,6 +129,9 @@ class DataManager:
                 conn.commit()
                 logger.info("データベース初期化完了")
                 
+                # 設定の移行処理を実行
+                self._migrate_settings_to_database()
+                
         except Exception as e:
             logger.error(f"データベース初期化エラー: {e}")
     
@@ -145,10 +147,9 @@ class DataManager:
                     "sensors": {
                         "check_interval": 60,
                         "temperature_humidity_interval": 1800,
-                        "soil_moisture_interval": 300
+                        "water_pressure_interval": 300
                     },
                     "watering": {
-                        "soil_moisture_threshold": 159,
                         "watering_interval_hours": 12,
                         "watering_duration_seconds": 5,
                         "water_amount_ml": 100
@@ -188,14 +189,13 @@ class DataManager:
                 cursor = conn.cursor()
                 cursor.execute("""
                     INSERT INTO sensor_data 
-                    (timestamp, temperature, humidity, soil_moisture, tank_level, sensor_status)
+                    (timestamp, temperature, humidity, water_pressure, sensor_status)
                     VALUES (?, ?, ?, ?, ?, ?)
                 """, (
                     data.get('timestamp'),
                     data.get('temperature'),
                     data.get('humidity'),
-                    data.get('soil_moisture'),
-                    data.get('tank_level'),
+                    data.get('water_pressure'),
                     json.dumps(data.get('sensor_status', {}))
                 ))
                 conn.commit()
@@ -370,7 +370,7 @@ class DataManager:
             if sensor_data:
                 temperatures = [d['temperature'] for d in sensor_data if d['temperature']]
                 humidities = [d['humidity'] for d in sensor_data if d['humidity']]
-                soil_moistures = [d['soil_moisture'] for d in sensor_data if d['soil_moisture']]
+                water_pressures = [d['water_pressure'] for d in sensor_data if d['water_pressure']]
                 
                 stats['sensors'] = {
                     'temperature': {
@@ -383,10 +383,10 @@ class DataManager:
                         'min': min(humidities) if humidities else 0,
                         'max': max(humidities) if humidities else 0
                     },
-                    'soil_moisture': {
-                        'avg': sum(soil_moistures) / len(soil_moistures) if soil_moistures else 0,
-                        'min': min(soil_moistures) if soil_moistures else 0,
-                        'max': max(soil_moistures) if soil_moistures else 0
+                    'water_pressure': {
+                        'avg': sum(water_pressures) / len(water_pressures) if water_pressures else 0,
+                        'min': min(water_pressures) if water_pressures else 0,
+                        'max': max(water_pressures) if water_pressures else 0
                     }
                 }
             
@@ -532,6 +532,24 @@ class DataManager:
         settings = self.get_settings()
         return settings.get(section, {})
     
+    def _migrate_settings_to_database(self):
+        """設定をデータベースに移行"""
+        try:
+            # settingsテーブルが空かチェック
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("SELECT COUNT(*) FROM settings")
+                count = cursor.fetchone()[0]
+                
+                if count == 0:
+                    logger.info("settingsテーブルが空のため、設定を移行します")
+                    self._migrate_from_config_json()
+                else:
+                    logger.info("settingsテーブルに既にデータが存在します")
+                    
+        except Exception as e:
+            logger.error(f"設定移行エラー: {e}")
+    
     def _migrate_from_config_json(self) -> Dict:
         """config.jsonからSQLiteに移行"""
         try:
@@ -554,10 +572,9 @@ class DataManager:
                     "sensors": {
                         "check_interval": 60,
                         "temperature_humidity_interval": 1800,
-                        "soil_moisture_interval": 300
+                        "water_pressure_interval": 300
                     },
                     "watering": {
-                        "soil_moisture_threshold": 159,
                         "watering_interval_hours": 12,
                         "watering_duration_seconds": 5,
                         "water_amount_ml": 100

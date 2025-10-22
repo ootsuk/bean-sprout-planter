@@ -196,7 +196,7 @@ class DashboardManager {
             this.updateSensorDisplay({
                 temperature: (20 + Math.random() * 10).toFixed(1),
                 humidity: (50 + Math.random() * 30).toFixed(1),
-                tank_level: (60 + Math.random() * 40).toFixed(1)
+                water_pressure: (0.5 + Math.random() * 0.5).toFixed(3)
             });
         } finally {
             this.isUpdating = false;
@@ -215,9 +215,9 @@ class DashboardManager {
             humidityElement.textContent = `${data.humidity}%`;
         }
 
-        const tankElement = document.getElementById('tank-level');
-        if (tankElement && data.tank_level !== undefined) {
-            tankElement.textContent = `${data.tank_level}%`;
+        const pressureElement = document.getElementById('water-pressure');
+        if (pressureElement && data.water_pressure !== undefined) {
+            pressureElement.textContent = `${data.water_pressure} bar`;
         }
 
         this.updateCardColors(data);
@@ -237,15 +237,15 @@ class DashboardManager {
             }
         }
 
-        const tankCard = document.querySelector('#tank-level')?.closest('.card');
-        if (tankCard) {
-            const level = parseFloat(data.tank_level);
-            if (level < 20) {
-                tankCard.className = 'card status-card bg-danger text-white';
-            } else if (level < 50) {
-                tankCard.className = 'card status-card bg-warning text-white';
+        const pressureCard = document.querySelector('#water-pressure')?.closest('.card');
+        if (pressureCard) {
+            const pressure = parseFloat(data.water_pressure);
+            if (pressure < 0.2) {
+                pressureCard.className = 'card status-card bg-danger text-white';
+            } else if (pressure > 1.5) {
+                pressureCard.className = 'card status-card bg-warning text-white';
             } else {
-                tankCard.className = 'card status-card bg-success text-white';
+                pressureCard.className = 'card status-card bg-success text-white';
             }
         }
     }

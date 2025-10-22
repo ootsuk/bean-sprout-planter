@@ -47,7 +47,7 @@ class AIConsultationManager:
 センサーデータ:
 - 温度: {temperature}°C
 - 湿度: {humidity}%
-- 土壌水分: {soil_moisture}%
+- 水圧: {water_pressure}bar
 
 豆苗の成長段階と収穫の目安:
 1. 発芽期（1-2日）: 種から芽が出る
@@ -176,7 +176,7 @@ class AIConsultationManager:
             prompt = self.prompts['harvest_judgment'].format(
                 temperature=sensor_data.get('temperature', 0),
                 humidity=sensor_data.get('humidity', 0),
-                soil_moisture=sensor_data.get('soil_moisture', 0)
+                water_pressure=sensor_data.get('water_pressure', 0)
             )
             response = self._call_ai_api(prompt, "harvest_judgment", image_data=image_data)
             result = self._parse_json_response(response)

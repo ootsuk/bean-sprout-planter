@@ -9,8 +9,7 @@ import logging
 from datetime import datetime
 from typing import Dict, Any, List, Optional
 from .temperature_humidity import AHT25Sensor
-from .soil_moisture import SEN0193Sensor
-from .float_switch import FloatSwitch
+from .water_pressure import MS583730BA01Sensor
 
 
 class SensorManager:
@@ -33,13 +32,9 @@ class SensorManager:
             self.sensors['temperature_humidity'] = AHT25Sensor()
             self.sensors['temperature_humidity'].initialize()
             
-            # 土壌水分センサー
-            self.sensors['soil_moisture'] = SEN0193Sensor(channel=0, vref=3.3)
-            self.sensors['soil_moisture'].initialize()
-            
-            # フロートスイッチ
-            self.sensors['water_level'] = FloatSwitch(pin=18)
-            self.sensors['water_level'].initialize()
+            # 水圧センサー
+            self.sensors['water_pressure'] = MS583730BA01Sensor()
+            self.sensors['water_pressure'].initialize()
             
             self.logger.info("全センサー初期化完了")
             
@@ -131,27 +126,27 @@ class SensorManager:
             self.logger.error(f"温湿度センサー読み取りエラー: {str(e)}")
             return {}
     
-    def read_soil_moisture_once(self) -> Dict[str, Any]:
-        """土壌水分センサーのみを読み取る（スケジューラー用）"""
+    def read_water_pressure_once(self) -> Dict[str, Any]:
+        """水圧センサーのみを読み取る（スケジューラー用）"""
         try:
-            if 'soil_moisture' in self.sensors:
-                sensor = self.sensors['soil_moisture']
+            if 'water_pressure' in self.sensors:
+                sensor = self.sensors['water_pressure']
                 if sensor.is_enabled:
                     data = sensor.read_data()
-                    self.data_cache['soil_moisture'] = {
+                    self.data_cache['water_pressure'] = {
                         'data': data,
                         'timestamp': time.time()
                     }
                     
                     # データベースに保存
-                    self._save_sensor_data_to_db({'soil_moisture': data})
+                    self._save_sensor_data_to_db({'water_pressure': data})
                     
                     return data
             
             return {}
             
         except Exception as e:
-            self.logger.error(f"土壌水分センサー読み取りエラー: {str(e)}")
+            self.logger.error(f"水圧センサー読み取りエラー: {str(e)}")
             return {}
     
     def _save_sensor_data_to_db(self, sensor_data: Dict[str, Any]):
@@ -164,8 +159,7 @@ class SensorManager:
                 'timestamp': datetime.now().isoformat(),
                 'temperature': None,
                 'humidity': None,
-                'soil_moisture': None,
-                'tank_level': None,
+                'water_pressure': None,
                 'sensor_status': 'active'
             }
             
@@ -174,10 +168,8 @@ class SensorManager:
                 if sensor_name == 'temperature_humidity':
                     integrated_data['temperature'] = data.get('temperature')
                     integrated_data['humidity'] = data.get('humidity')
-                elif sensor_name == 'soil_moisture':
-                    integrated_data['soil_moisture'] = data.get('soil_moisture')
-                elif sensor_name == 'water_level':
-                    integrated_data['tank_level'] = data.get('tank_level')
+                elif sensor_name == 'water_pressure':
+                    integrated_data['water_pressure'] = data.get('pressure')
             
             # データベースに保存
             data_manager.save_sensor_data(integrated_data)
@@ -211,20 +203,14 @@ class SensorManager:
         # 温湿度データ
         temp_hum_data = self.get_sensor_data('temperature_humidity') or {}
         
-        # 土壌水分データ
-        soil_data = self.get_sensor_data('soil_moisture') or {}
-        
-        # 水位データ
-        water_data = self.get_sensor_data('water_level') or {}
+        # 水圧データ
+        water_pressure_data = self.get_sensor_data('water_pressure') or {}
         
         # 統合データ
         return {
             'temperature': temp_hum_data.get('temperature'),
             'humidity': temp_hum_data.get('humidity'),
-            'soil_moisture': soil_data.get('raw_value'),
-            'soil_moisture_percentage': soil_data.get('moisture_percentage'),
-            'water_present': water_data.get('water_present'),
-            'water_level': water_data.get('level'),
+            'water_pressure': water_pressure_data.get('pressure'),
             'timestamp': time.time()
         }
     # グローバルインスタンス

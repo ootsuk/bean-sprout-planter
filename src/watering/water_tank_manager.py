@@ -274,33 +274,18 @@ class WaterTankManager:
             
             # 設定を取得
             watering_config = self.data_manager.get_setting_section('watering')
-            soil_moisture_threshold = watering_config.get('soil_moisture_threshold', 159)
             watering_duration_seconds = watering_config.get('watering_duration_seconds', 5)
             water_amount_ml = watering_config.get('water_amount_ml', 100)
             
-            # 土壌水分センサーから現在の値を取得
-            current_moisture = self._get_current_soil_moisture()
-            
             result = {
                 'timestamp': datetime.now().isoformat(),
-                'current_moisture': current_moisture,
-                'threshold': soil_moisture_threshold,
                 'watering_needed': False,
                 'watering_executed': False,
                 'water_amount': 0,
-                'reason': ''
+                'reason': '給水判定ロジックは今後実装予定（水圧センサー使用）'
             }
             
-            # 給水判定
-            if current_moisture is not None and current_moisture < soil_moisture_threshold:
-                result['watering_needed'] = True
-                result['reason'] = f'土壌水分が閾値以下です ({current_moisture} < {soil_moisture_threshold})'
-                
-                # 給水実行
-                watering_result = self._execute_watering(water_amount_ml, watering_duration_seconds)
-                result.update(watering_result)
-            else:
-                result['reason'] = f'土壌水分が十分です ({current_moisture} >= {soil_moisture_threshold})'
+            # TODO: 水圧センサーによる給水判定ロジックを実装
             
             # 履歴保存
             self._save_watering_history(result)
@@ -317,20 +302,9 @@ class WaterTankManager:
             }
     
     def _get_current_soil_moisture(self) -> Optional[int]:
-        """現在の土壌水分値を取得"""
-        try:
-            from src.sensors.sensor_manager import sensor_manager
-            
-            # センサーマネージャーから最新の土壌水分データを取得
-            soil_data = sensor_manager.get_sensor_data('soil_moisture')
-            if soil_data and 'soil_moisture' in soil_data:
-                return soil_data['soil_moisture']
-            
-            return None
-            
-        except Exception as e:
-            self.logger.error(f"土壌水分取得エラー: {e}")
-            return None
+        """土壌水分センサーは廃止されました"""
+        self.logger.warning("土壌水分センサーは廃止されました")
+        return None
     
     def _execute_watering(self, amount_ml: int, duration_seconds: int) -> Dict[str, Any]:
         """実際の給水実行"""
